@@ -11,11 +11,41 @@ router.get("/", async (_, res) => {
 router.post("/", async (req, res) => {
     const { title, ownerId } = req.body;
 
-    const newTodo = await prisma.todo.create({
-        data: { title, ownerId, completed: false },
-    });
+    if (!title || typeof title !== "string" || title.trim() === "") {
+        res.status(400).json({ error: "Title is required and must be a non-empty string" });
+        return;
+    }
 
-    res.status(201).json(newTodo);
+    if (ownerId === undefined || ownerId === null) {
+        res.status(400).json({ error: "Owner ID is required" });
+        return;
+    }
+
+    const parsedOwnerId = Number(ownerId);
+    if (isNaN(parsedOwnerId)) {
+        res.status(400).json({ error: "Owner ID must be a valid number" });
+        return;
+    }
+
+    try {
+        const userExists = await prisma.user.findUnique({
+            where: { id: parsedOwnerId },
+        });
+
+        if (!userExists) {
+            res.status(404).json({ error: "Owner not found in database" });
+            return;
+        }
+
+        const newTodo = await prisma.todo.create({
+            data: { title, ownerId: parsedOwnerId, completed: false },
+        });
+
+        res.status(201).json(newTodo);
+    } catch (error) {
+        console.error("Error creating todo:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 router.put("/:id", async (req, res) => {

@@ -63,8 +63,8 @@ generate:
 # Project Execution Commands
 # ==========================================
 dev:
-	@echo "Starting development server..."
-	npm run dev
+	@echo "Starting development server (watch mode)..."
+	node --import tsx --watch src/server.ts
 
 build:
 	@echo "Building the project..."

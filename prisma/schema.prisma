@@ -16,6 +16,10 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String?
+  // We store a *hash* of the password, never the raw password.
+  // Nullable for now because there are existing rows in the DB.
+  // TODO(auth): Backfill old users with a password flow, then make this required.
+  passwordHash String?
   createdAt DateTime @default(now())
   todos     Todo[]
 }

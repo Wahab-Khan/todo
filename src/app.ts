@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 // import dotenv from "dotenv";
 import todoRoutes from "./routes/todo.routes";
@@ -6,7 +6,7 @@ import userRoutes from "./routes/user.routes";
 import authRoutes from "./routes/auth.routes";
 import { errorHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
-import { openapiSpec } from "./openapi";
+import { getOpenApiSpec } from "./openapi";
 
 // dotenv.config();
 
@@ -24,10 +24,13 @@ app.use(cors());
 app.use(express.json());
 
 // Swagger UI (interactive API docs)
-app.get("/openapi.json", (_req, res) => {
-  res.json(openapiSpec);
+// Server URL is resolved per request so local vs EC2 "Try it out" targets the right host.
+app.get("/openapi.json", (req, res) => {
+  res.json(getOpenApiSpec(req));
 });
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
+app.use("/docs", swaggerUi.serve, (req: Request, res: Response, next: NextFunction) => {
+  swaggerUi.setup(getOpenApiSpec(req))(req, res, next);
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

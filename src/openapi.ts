@@ -1,3 +1,5 @@
+import type { Request } from "express";
+
 /**
  * Static OpenAPI spec for learning.
  *
@@ -5,19 +7,18 @@
  * - Easy to read and understand as "API contract"
  * - No magic: what you see here is what Swagger UI shows
  *
- * Notes:
- * - `servers.url` should match where the API is running.
- *   For local dev: http://localhost:8080
- *   For Render:    https://<your-service>.onrender.com
+ * Server URL resolution (for "Try it out" in Swagger):
+ * 1. `API_BASE_URL` env var if set (e.g. on EC2: http://54.161.61.157:8080)
+ * 2. Otherwise derived from the incoming request host (works for local + EC2)
+ * 3. Fallback: http://localhost:8080
  */
-export const openapiSpec = {
+const openApiBase = {
   openapi: "3.0.0",
   info: {
     title: "Todo Backend API",
     version: "1.0.0",
     description: "Learning project: Express + Prisma + Zod",
   },
-  servers: [{ url: "http://localhost:8080" }],
   tags: [
     { name: "Health" },
     { name: "Auth" },
@@ -417,3 +418,32 @@ export const openapiSpec = {
     },
   },
 } as const;
+
+const DEFAULT_SERVER_URL = "http://localhost:8080";
+
+/** Resolve the public base URL Swagger should use for API calls. */
+export function getServerUrl(req?: Request): string {
+  if (process.env.API_BASE_URL) {
+    return process.env.API_BASE_URL.replace(/\/$/, "");
+  }
+
+  if (req) {
+    const proto =
+      (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0] ??
+      req.protocol;
+    const host =
+      (req.headers["x-forwarded-host"] as string | undefined) ?? req.get("host");
+
+    if (host) return `${proto}://${host}`;
+  }
+
+  return DEFAULT_SERVER_URL;
+}
+
+/** Build the OpenAPI document with the correct server URL for the current environment. */
+export function getOpenApiSpec(req?: Request) {
+  return {
+    ...openApiBase,
+    servers: [{ url: getServerUrl(req) }],
+  };
+}
